@@ -42,19 +42,27 @@ const cotacao = async () => {
 			}
 
 			element = {
-				codFabrica: element.slice(
-					sliceIndex('\n', arrayPositionN[0]) + 19,
-					sliceIndex('\n', arrayPositionN[1])
-				),
-				modelo: element.slice(
-					sliceIndex('\n', arrayPositionN[1]) + 8,
-					sliceIndex('\n', arrayPositionN[2])
-				),
-				codInterno: element.slice(
-					sliceIndex('\n', arrayPositionN[2]) + 16,
-					sliceIndex('\n', arrayPositionN[3])
-				),
-				cliente: element.slice(sliceIndex('\n', arrayPositionN[3]) + 9),
+				codFabrica: element
+					.slice(
+						sliceIndex('\n', arrayPositionN[0]) + 19,
+						sliceIndex('\n', arrayPositionN[1])
+					)
+					.toUpperCase(),
+				modelo: element
+					.slice(
+						sliceIndex('\n', arrayPositionN[1]) + 8,
+						sliceIndex('\n', arrayPositionN[2])
+					)
+					.toUpperCase(),
+				codInterno: element
+					.slice(
+						sliceIndex('\n', arrayPositionN[2]) + 16,
+						sliceIndex('\n', arrayPositionN[3])
+					)
+					.toUpperCase(),
+				cliente: element
+					.slice(sliceIndex('\n', arrayPositionN[3]) + 9)
+					.toUpperCase(),
 			}
 			return element
 		}
@@ -72,18 +80,15 @@ const cotacao = async () => {
 			.map(arrayToObject)
 		return result
 	})
-	console.log(cotacaoList)
 	fs.writeFile(
 		'cotacao.json',
 		JSON.stringify(cotacaoList, null, 4),
 		(err) => {
 			if (err) throw new Error('algo de errado')
-
-			console.log('feito')
 		}
 	)
 
-	// page.close()
+	page.close()
 }
 
 cotacao()
