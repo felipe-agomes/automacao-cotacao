@@ -1,22 +1,66 @@
 const puppeteer = require('puppeteer')
 const fs = require('fs')
+const xlsx = require('xlsx')
+const nodemailer = require('nodemailer')
+const dotenv = require('dotenv')
 
-const cotacao = async () => {
-	const browser = await puppeteer.launch({ headless: false })
+dotenv.config()
+
+const emailPassword = process.env.EMAIL_PASSWORD
+const emailUser = process.env.EMAIL_USER
+
+const convertJsonToXlsx = async (json) => {
+	const workSheet = xlsx.utils.json_to_sheet(json)
+	const workBook = xlsx.utils.book_new()
+
+	xlsx.utils.book_append_sheet(workBook, workSheet, 'Cotação')
+
+	// arquivo xlsx gerado
+	await xlsx.write(workBook, { bookType: 'xlsx', type: 'binary' })
+	await xlsx.writeFile(workBook, 'cotacao.xlsx')
+}
+
+const sendEmail = async () => {
+	// dados de transporte do email
+	let transporter = nodemailer.createTransport({
+		host: 'smtp.gmail.com',
+		port: '465',
+		secure: true,
+		auth: {
+			user: emailUser,
+			pass: emailPassword,
+		},
+	})
+
+	// dados para enviar o email
+	transporter.sendMail({
+		from: `someone" <${emailUser}>`,
+		to: emailUser,
+		subject: 'Cotação', // titulo
+		text: 'Hello world?', // texto do email
+		attachments: {
+			path: './cotacao.xlsx', // caminho relativo do arquivo
+		},
+	})
+}
+
+const sendCotacao = async () => {
+	const browser = await puppeteer.launch({ headless: false }) // headless false para abrir o navegador, não utilizar true para whatsapp
 	const page = await browser.newPage()
 	await page.goto('https://web.whatsapp.com/')
 
-	const waitThisAtt = 'text/Programar'
+	const waitThisAtt = 'text/Programar' // nome do grupo
 	const groupWpp = await page.waitForSelector(waitThisAtt)
 	groupWpp.click()
-	const waitCotacao = '._22Msk'
-	await page.waitForSelector(waitCotacao)
+	const waitCotacao = 'text/xxxxx' // identificador de inicio da cotação
+	await page.waitForSelector(waitCotacao, { timeout: 0 })
 
 	const cotacaoList = await page.evaluate(async () => {
 		let filterParams = 0
 
 		const excluirCotacaoAntiga = (cotacao) => {
-			if (cotacao.includes('xxx')) {
+			// identificador de inicio da cotação
+			if (cotacao.includes('xxxxx')) {
 				filterParams++
 			}
 			if (filterParams === 0) {
@@ -24,8 +68,15 @@ const cotacao = async () => {
 			}
 		}
 
+		const excluirNaoCotacao = (cotacao) => {
+			if (cotacao.includes('Cliente')) {
+				return cotacao
+			}
+		}
+
 		const arrayToObject = (element) => {
 			const arrayPosition = () => {
+				// detectar a posição da quebra de linha
 				const array = []
 				for (let i = 0; i < element.length; i++) {
 					if (element[i] == '\n') {
@@ -34,7 +85,6 @@ const cotacao = async () => {
 				}
 				return array
 			}
-
 			const arrayPositionN = arrayPosition()
 
 			const sliceIndex = (str, start) => {
@@ -43,52 +93,49 @@ const cotacao = async () => {
 
 			element = {
 				codFabrica: element
-					.slice(
-						sliceIndex('\n', arrayPositionN[0]) + 19,
-						sliceIndex('\n', arrayPositionN[1])
-					)
+					.slice(15, sliceIndex('\n', arrayPositionN[0]))
 					.toUpperCase(),
 				modelo: element
 					.slice(
-						sliceIndex('\n', arrayPositionN[1]) + 8,
-						sliceIndex('\n', arrayPositionN[2])
+						sliceIndex('\n', arrayPositionN[0]) + 8,
+						sliceIndex('\n', arrayPositionN[1])
 					)
 					.toUpperCase(),
 				codInterno: element
 					.slice(
-						sliceIndex('\n', arrayPositionN[2]) + 16,
-						sliceIndex('\n', arrayPositionN[3])
+						sliceIndex('\n', arrayPositionN[1]) + 16,
+						sliceIndex('\n', arrayPositionN[2])
 					)
 					.toUpperCase(),
 				cliente: element
-					.slice(sliceIndex('\n', arrayPositionN[3]) + 9)
+					.slice(sliceIndex('\n', arrayPositionN[2]) + 9)
 					.toUpperCase(),
 			}
 			return element
 		}
 
-		const nodeListCotacao = document.querySelectorAll(
+		const nodeListMsg = document.querySelectorAll(
 			'div.ItfyB._3nbHh > div._22Msk > div.copyable-text > div > span.i0jNr.selectable-text.copyable-text > span'
 		)
-		const arrayCotacao = [...nodeListCotacao]
-		const result = arrayCotacao
+		const arrayMsg = [...nodeListMsg]
+
+		// transformar array em objeto, e retirar cotações antes do marcador de inicio da cotação
+		const result = arrayMsg
 			.map(({ textContent }) => {
 				return textContent
 			})
 			.reverse()
 			.filter(excluirCotacaoAntiga)
+			.filter(excluirNaoCotacao)
 			.map(arrayToObject)
+
 		return result
 	})
-	fs.writeFile(
-		'cotacao.json',
-		JSON.stringify(cotacaoList, null, 4),
-		(err) => {
-			if (err) throw new Error('algo de errado')
-		}
-	)
-
 	page.close()
+
+	convertJsonToXlsx(cotacaoList)
+
+	sendEmail().catch(console.error)
 }
 
-cotacao()
+sendCotacao()
