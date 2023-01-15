@@ -1,5 +1,4 @@
 const puppeteer = require('puppeteer')
-const fs = require('fs')
 const xlsx = require('xlsx')
 const nodemailer = require('nodemailer')
 const dotenv = require('dotenv')
@@ -60,7 +59,7 @@ const sendCotacao = async () => {
 
 		const excluirCotacaoAntiga = (cotacao) => {
 			// identificador de inicio da cotação
-			if (cotacao.includes('xxxxx' || 'XXXXX')) {
+			if (cotacao.includes('xxxxx' || 'XXXXX' || cotacao.includes('XXXXX'))) {
 				filterParams++
 			}
 			if (filterParams === 0) {
