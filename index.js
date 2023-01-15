@@ -60,7 +60,7 @@ const sendCotacao = async () => {
 
 		const excluirCotacaoAntiga = (cotacao) => {
 			// identificador de inicio da cotação
-			if (cotacao.includes('xxxxx')) {
+			if (cotacao.includes('xxxxx' || 'XXXXX')) {
 				filterParams++
 			}
 			if (filterParams === 0) {
